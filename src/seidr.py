@@ -50,10 +50,11 @@ class SEIDR:
 
         self.no_of_days = no_of_days
         self.t = np.linspace(0, no_of_days, no_of_days+1)
+        self.results = None
 
 
     def _deriv(self, initial_conditions, t):
-        S, E, I, D, R = initial_conditions
+        S, E, I, _, R = initial_conditions
         N = (S+E+I+R)
         dSdt = (-self.beta * S * I / N) -  self.mi*S +self.lambda_
         dEdt = self.beta * S * I / N - (self.mi+self.epsilon)*E
@@ -89,7 +90,7 @@ class SEIDR:
         legend.get_frame().set_alpha(0.5)
         for spine in ('top', 'right', 'bottom', 'left'):
             ax.spines[spine].set_visible(False)
-        plt.savefig(f"{OUTPUT_DIRECTORY_PATH}/SEIR.png")
+        plt.savefig(f"{OUTPUT_DIRECTORY_PATH}/S{self.S0}_E{self.E0}_I{self.I0}_D{self.D0}_R{self.R0}_B{self.beta}_a{self.alpha}_g{self.gamma}_m{self.mi}_l{self.lambda_}_e{self.epsilon}.png")
         plt.close()
 
     def save_results(self):
@@ -99,7 +100,7 @@ class SEIDR:
         S, E, I, D, R = self.results.T
         results = zip( S, E, I, D, R)
         df = pd.DataFrame(results, columns=["Susceptible", "Exposed", "Infected", "Fatalities", "Recovered"])
-        df.to_csv(f"{OUTPUT_DIRECTORY_PATH}/results.csv")
+        df.to_csv(f"{OUTPUT_DIRECTORY_PATH}/S{self.S0}_E{self.E0}_I{self.I0}_D{self.D0}_R{self.R0}_B{self.beta}_a{self.alpha}_g{self.gamma}_m{self.mi}_l{self.lambda_}_e{self.epsilon}.csv")
 
 
 
