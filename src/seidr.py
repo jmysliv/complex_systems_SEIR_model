@@ -17,13 +17,15 @@ class SEIDR:
                 I = 0, 
                 D = 0, 
                 R = 0, 
-                beta = 0.5, 
+                beta_bins = [20, 50],
+                beta_values = [0.75, 0.5, 0.25],
                 gamma = 0.1, 
                 mi = 0.0002, 
-                lambda_ = 0.3, 
+                lambda_ = 0.0003, 
                 epsilon = 0.2, 
                 alpha = 0.01, 
-                no_of_days = 100):
+                delta = 0.01,
+                no_of_days = 400):
 
         # Susceptible
         self.S0 = S
@@ -35,8 +37,10 @@ class SEIDR:
         self.D0 = D
         # recovered
         self.R0 = R
-        # Contact rate
-        self.beta = beta
+        # bins for days when given contact rates ends
+        self.beta_bins = beta_bins
+        # array of contact rates values
+        self.beta_values = beta_values
         # mean recovery rate, (in 1/days).
         self.gamma = gamma
         # natural death rate
@@ -47,25 +51,31 @@ class SEIDR:
         self.epsilon = epsilon
         # fatality rate
         self.alpha = alpha
+        # immunity loss rate
+        self.delta = delta
 
         self.no_of_days = no_of_days
         self.t = np.linspace(0, no_of_days, no_of_days+1)
         self.results = None
 
 
-    def _deriv(self, initial_conditions, t):
-        S, E, I, _, R = initial_conditions
+    def _deriv(self, y, t):
+        current_beta = self.beta_values[np.digitize(t, self.beta_bins)]
+        S, E, I, _, R = y
         N = (S+E+I+R)
-        dSdt = (-self.beta * S * I / N) -  self.mi*S +self.lambda_
-        dEdt = self.beta * S * I / N - (self.mi+self.epsilon)*E
-        dIdt = self.epsilon*E - (self.gamma+self.mi+self.alpha)*I
-        dDdt = self.alpha*I
-        dRdt = self.gamma * I - self.mi*R
+        dSdt = (-current_beta * S * I / N) -  self.mi * S + self.lambda_ * N + self.delta * R
+        dEdt = current_beta * S * I / N - (self.mi + self.epsilon) * E
+        dIdt = self.epsilon * E - (self.gamma + self.mi + self.alpha) * I
+        dDdt = self.alpha * I
+        dRdt = self.gamma * I - self.mi * R - self.delta * R
         return dSdt, dEdt, dIdt, dDdt, dRdt
 
     def calculate(self):
         y0 = self.S0, self.E0, self.I0, self.D0, self.R0
         self.results = odeint(self._deriv, y0, self.t)
+
+    def generate_model_signature(self):
+        return f'S{self.S0}_E{self.E0}_I{self.I0}_D{self.D0}_R{self.R0}_a{self.alpha}_g{self.gamma}_m{self.mi}_l{self.lambda_}_e{self.epsilon}_d{self.delta}'
 
 
     def plot(self):
@@ -90,7 +100,7 @@ class SEIDR:
         legend.get_frame().set_alpha(0.5)
         for spine in ('top', 'right', 'bottom', 'left'):
             ax.spines[spine].set_visible(False)
-        plt.savefig(f"{OUTPUT_DIRECTORY_PATH}/S{self.S0}_E{self.E0}_I{self.I0}_D{self.D0}_R{self.R0}_B{self.beta}_a{self.alpha}_g{self.gamma}_m{self.mi}_l{self.lambda_}_e{self.epsilon}.png")
+        plt.savefig(f"{OUTPUT_DIRECTORY_PATH}/{self.generate_model_signature()}.png")
         plt.close()
 
     def save_results(self):
@@ -100,7 +110,7 @@ class SEIDR:
         S, E, I, D, R = self.results.T
         results = zip( S, E, I, D, R)
         df = pd.DataFrame(results, columns=["Susceptible", "Exposed", "Infected", "Fatalities", "Recovered"])
-        df.to_csv(f"{OUTPUT_DIRECTORY_PATH}/S{self.S0}_E{self.E0}_I{self.I0}_D{self.D0}_R{self.R0}_B{self.beta}_a{self.alpha}_g{self.gamma}_m{self.mi}_l{self.lambda_}_e{self.epsilon}.csv")
+        df.to_csv(f"{OUTPUT_DIRECTORY_PATH}/{self.generate_model_signature()}.csv")
 
 
 
