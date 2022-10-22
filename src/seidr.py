@@ -51,7 +51,7 @@ class SEIDR:
         self.epsilon = epsilon
         # fatality rate
         self.alpha = alpha
-        # possibility of losing immunity
+        # immunity loss rate
         self.delta = delta
 
         self.no_of_days = no_of_days
@@ -73,6 +73,9 @@ class SEIDR:
     def calculate(self):
         y0 = self.S0, self.E0, self.I0, self.D0, self.R0
         self.results = odeint(self._deriv, y0, self.t)
+
+    def generate_model_signature(self):
+        return f'S{self.S0}_E{self.E0}_I{self.I0}_D{self.D0}_R{self.R0}_a{self.alpha}_g{self.gamma}_m{self.mi}_l{self.lambda_}_e{self.epsilon}_d{self.delta}'
 
 
     def plot(self):
@@ -97,7 +100,7 @@ class SEIDR:
         legend.get_frame().set_alpha(0.5)
         for spine in ('top', 'right', 'bottom', 'left'):
             ax.spines[spine].set_visible(False)
-        plt.savefig(f"{OUTPUT_DIRECTORY_PATH}/S{self.S0}_E{self.E0}_I{self.I0}_D{self.D0}_R{self.R0}_a{self.alpha}_g{self.gamma}_m{self.mi}_l{self.lambda_}_e{self.epsilon}_d{self.delta}.png")
+        plt.savefig(f"{OUTPUT_DIRECTORY_PATH}/{self.generate_model_signature()}.png")
         plt.close()
 
     def save_results(self):
@@ -107,7 +110,7 @@ class SEIDR:
         S, E, I, D, R = self.results.T
         results = zip( S, E, I, D, R)
         df = pd.DataFrame(results, columns=["Susceptible", "Exposed", "Infected", "Fatalities", "Recovered"])
-        df.to_csv(f"{OUTPUT_DIRECTORY_PATH}/S{self.S0}_E{self.E0}_I{self.I0}_D{self.D0}_R{self.R0}_a{self.alpha}_g{self.gamma}_m{self.mi}_l{self.lambda_}_e{self.epsilon}_d{self.delta}.csv")
+        df.to_csv(f"{OUTPUT_DIRECTORY_PATH}/{self.generate_model_signature()}.csv")
 
 
 
