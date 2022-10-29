@@ -112,10 +112,16 @@ class SEIDR:
         df = pd.DataFrame(results, columns=["Susceptible", "Exposed", "Infected", "Fatalities", "Recovered"])
         df.to_csv(f"{OUTPUT_DIRECTORY_PATH}/{self.generate_model_signature()}.csv")
 
+    def get_final_fatalities(self):
+        if self.results is None:
+            raise ModelResultsNotCalculatedError()
 
+        _, _, _, D, _ = self.results.T
+        return D[-1]
 
 if __name__ == "__main__":
     model = SEIDR() 
     model.calculate()
     model.save_results()
     model.plot()
+    print(model.get_final_fatalities())
