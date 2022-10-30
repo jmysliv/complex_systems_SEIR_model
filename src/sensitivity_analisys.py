@@ -17,12 +17,11 @@ def sa(N):
             'beta1', 'beta2', 'beta3', 'gamma', 'mi', 'lambda', 'epsilon', 'alpha', 'delta'
     ],
     'bounds': [
-        [0.0,1.0]*9
+        [0.0,1.0] for _ in range(9)
     ]
     }
 
     param_values = sample(problem, N, calc_second_order=False)
-    print(param_values.shape)
 
     Y = np.zeros([param_values.shape[0]])
 
