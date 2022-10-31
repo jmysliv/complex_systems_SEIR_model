@@ -11,7 +11,8 @@ class ModelResultsNotCalculatedError(Exception):
         super().__init__("you need to call the calculate method first",*args)
 
 class SEIDR:
-    def __init__(self, 
+    def __init__(self,
+                name: str, 
                 S = 9900,
                 E = 100, 
                 I = 0, 
@@ -27,6 +28,7 @@ class SEIDR:
                 delta = 0.01,
                 no_of_days = 400):
 
+        self.name = name
         # Susceptible
         self.S0 = S
         # exposed
@@ -74,10 +76,6 @@ class SEIDR:
         y0 = self.S0, self.E0, self.I0, self.D0, self.R0
         self.results = odeint(self._deriv, y0, self.t)
 
-    def generate_model_signature(self):
-        return f'S{self.S0}_E{self.E0}_I{self.I0}_D{self.D0}_R{self.R0}_a{self.alpha}_g{self.gamma}_m{self.mi}_l{self.lambda_}_e{self.epsilon}_d{self.delta}'
-
-
     def plot(self):
         if self.results is None:
             raise ModelResultsNotCalculatedError()
@@ -100,7 +98,7 @@ class SEIDR:
         legend.get_frame().set_alpha(0.5)
         for spine in ('top', 'right', 'bottom', 'left'):
             ax.spines[spine].set_visible(False)
-        plt.savefig(f"{OUTPUT_DIRECTORY_PATH}/{self.generate_model_signature()}.png")
+        plt.savefig(f"{OUTPUT_DIRECTORY_PATH}/{self.name}.png")
         plt.close()
 
     def save_results(self):
@@ -110,7 +108,7 @@ class SEIDR:
         S, E, I, D, R = self.results.T
         results = zip( S, E, I, D, R)
         df = pd.DataFrame(results, columns=["Susceptible", "Exposed", "Infected", "Fatalities", "Recovered"])
-        df.to_csv(f"{OUTPUT_DIRECTORY_PATH}/{self.generate_model_signature()}.csv")
+        df.to_csv(f"{OUTPUT_DIRECTORY_PATH}/{self.name}.csv")
 
     def get_final_fatalities(self):
         if self.results is None:
@@ -119,9 +117,62 @@ class SEIDR:
         _, _, _, D, _ = self.results.T
         return D[-1]
 
+
+def compare_models(baseline: SEIDR, model: SEIDR):
+    S1, E1, I1, D1, R1 = baseline.results.T
+    S2, E2, I2, D2, R2 = model.results.T
+    t = baseline.t
+
+    labels = ['Susceptible', 'Exposed', 'Infected', 'Fatalities', 'Recovered with immunity']
+    baseline_results = [S1, E1, I1, D1, R1]
+    model_results = [S2, E2, I2, D2, R2]
+
+    for label, baseline_result, model_result in zip(labels, baseline_results, model_results):
+        fig = plt.figure(facecolor='w')
+        ax = fig.add_subplot(111, facecolor='#dddddd', axisbelow=True)
+        ax.plot(t, baseline_result, 'green', alpha=0.5, lw=2, label=f'{baseline.name}')
+        ax.plot(t, model_result, 'red', alpha=0.5, lw=2, label=f'{model.name}')
+        ax.set_xlabel('Time /days')
+        ax.set_ylabel('Population')
+        ax.yaxis.set_tick_params(length=0)
+        ax.xaxis.set_tick_params(length=0)
+        ax.grid(visible=True, which='major', c='w', lw=2, ls='-')
+        legend = ax.legend()
+        legend.get_frame().set_alpha(0.5)
+        ax.set_title(label)
+        for spine in ('top', 'right', 'bottom', 'left'):
+            ax.spines[spine].set_visible(False)
+        plt.savefig(f"{OUTPUT_DIRECTORY_PATH}/{model.name}_compare_{label}.png")
+        plt.close()
+
+
 if __name__ == "__main__":
-    model = SEIDR() 
-    model.calculate()
-    model.save_results()
-    model.plot()
-    print(model.get_final_fatalities())
+    # baseline
+    baseline = SEIDR(name="baseline") 
+    baseline.calculate()
+    baseline.save_results()
+    baseline.plot()
+    # model beta 2
+    model_beta_2 = SEIDR(name="model_beta_2", beta_values=[0.75, 1.0, 0.25]) 
+    model_beta_2.calculate()
+    model_beta_2.save_results()
+    model_beta_2.plot()
+
+    compare_models(baseline, model_beta_2)
+
+    # model beta 1
+    model_beta_1 = SEIDR(name="model_beta_1", beta_values=[0.1, 0.5, 0.25]) 
+    model_beta_1.calculate()
+    model_beta_1.save_results()
+    model_beta_1.plot()
+
+    compare_models(baseline, model_beta_1)
+
+    # model mi
+    model_mi = SEIDR(name="model_mi", mi=0.001) 
+    model_mi.calculate()
+    model_mi.save_results()
+    model_mi.plot()
+
+    compare_models(baseline, model_mi)
+
