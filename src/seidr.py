@@ -184,7 +184,7 @@ if __name__ == "__main__":
     SENSITIVE PARAMETER CHANGES
     '''
     # model gamma
-    model_gamma = SEIDR(name="model_gamma", gamma=0.2) 
+    model_gamma = SEIDR(name="model_gamma", gamma=0.13) 
     model_gamma.calculate()
     model_gamma.save_results()
     model_gamma.plot()
@@ -192,7 +192,7 @@ if __name__ == "__main__":
     compare_models(baseline, model_gamma)
 
     # model alpha
-    model_alpha = SEIDR(name="model_alpha", alpha=0.02) 
+    model_alpha = SEIDR(name="model_alpha", alpha=0.015) 
     model_alpha.calculate()
     model_alpha.save_results()
     model_alpha.plot()
@@ -200,7 +200,7 @@ if __name__ == "__main__":
     compare_models(baseline, model_alpha)
 
     # model beta3
-    model_beta3 = SEIDR(name="model_beta3", beta_values=[0.75, 0.5, 0.5]) 
+    model_beta3 = SEIDR(name="model_beta3", beta_values=[0.75, 0.5, 0.3]) 
     model_beta3.calculate()
     model_beta3.save_results()
     model_beta3.plot()
@@ -208,7 +208,7 @@ if __name__ == "__main__":
     compare_models(baseline, model_beta3)
 
     # model delta
-    model_delta = SEIDR(name="model_delta", delta=0.05) 
+    model_delta = SEIDR(name="model_delta", delta=0.015) 
     model_delta.calculate()
     model_delta.save_results()
     model_delta.plot()
