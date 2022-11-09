@@ -3,14 +3,63 @@ import numpy as np
 from scipy.integrate import odeint
 import matplotlib.pyplot as plt
 import pandas as pd
+import abc
 
 OUTPUT_DIRECTORY_PATH = "../output"
 
 class ModelResultsNotCalculatedError(Exception):
     def __init__(self, *args: object) -> None:
-        super().__init__("you need to call the calculate method first",*args)
+        super().__init__("Model object doesn't have results yet",*args)
 
-class SEIDR:
+class Model(abc.ABC):
+    def __init__(self, name) -> None:
+        self.name = name
+        self.results = None
+
+
+    def plot(self):
+        if self.results is None:
+            raise ModelResultsNotCalculatedError()
+
+        S, E, I, D, R = self.results.T
+
+        fig = plt.figure(facecolor='w')
+        ax = fig.add_subplot(111, facecolor='#dddddd', axisbelow=True)
+        ax.plot(self.t, S, 'b', alpha=0.5, lw=2, label='Susceptible')
+        ax.plot(self.t, E, 'orange', alpha=0.5, lw=2, label='Exposed')
+        ax.plot(self.t, I, 'r', alpha=0.5, lw=2, label='Infected')
+        ax.plot(self.t, D, 'black', alpha=0.5, lw=2, label='Fatalities')
+        ax.plot(self.t, R, 'g', alpha=0.5, lw=2, label='Recovered with immunity')
+        ax.set_xlabel('Time /days')
+        ax.set_ylabel('Population')
+        ax.yaxis.set_tick_params(length=0)
+        ax.xaxis.set_tick_params(length=0)
+        ax.grid(visible=True, which='major', c='w', lw=2, ls='-')
+        legend = ax.legend()
+        legend.get_frame().set_alpha(0.5)
+        for spine in ('top', 'right', 'bottom', 'left'):
+            ax.spines[spine].set_visible(False)
+        plt.savefig(f"{OUTPUT_DIRECTORY_PATH}/{self.name}.png")
+        plt.close()    
+
+    def save_results(self):
+        if self.results is None:
+            raise ModelResultsNotCalculatedError()
+
+        S, E, I, D, R = self.results.T
+        results = zip( S, E, I, D, R)
+        df = pd.DataFrame(results, columns=["Susceptible", "Exposed", "Infected", "Fatalities", "Recovered"])
+        df.to_csv(f"{OUTPUT_DIRECTORY_PATH}/{self.name}.csv")
+
+    def get_final_fatalities(self):
+        if self.results is None:
+            raise ModelResultsNotCalculatedError()
+
+        _, _, _, D, _ = self.results.T
+        return D[-1]
+    
+
+class SEIDR(Model):
     def __init__(self,
                 name: str, 
                 S = 9900,
@@ -27,8 +76,7 @@ class SEIDR:
                 alpha = 0.01, 
                 delta = 0.01,
                 no_of_days = 400):
-
-        self.name = name
+        super().__init__(name)
         # Susceptible
         self.S0 = S
         # exposed
@@ -58,8 +106,7 @@ class SEIDR:
 
         self.no_of_days = no_of_days
         self.t = np.linspace(0, no_of_days, no_of_days+1)
-        self.results = None
-
+    
 
     def _deriv(self, y, t):
         current_beta = self.beta_values[np.digitize(t, self.beta_bins)]
@@ -76,46 +123,24 @@ class SEIDR:
         y0 = self.S0, self.E0, self.I0, self.D0, self.R0
         self.results = odeint(self._deriv, y0, self.t)
 
-    def plot(self):
-        if self.results is None:
-            raise ModelResultsNotCalculatedError()
 
-        S, E, I, D, R = self.results.T
 
-        fig = plt.figure(facecolor='w')
-        ax = fig.add_subplot(111, facecolor='#dddddd', axisbelow=True)
-        ax.plot(self.t, S, 'b', alpha=0.5, lw=2, label='Susceptible')
-        ax.plot(self.t, E, 'orange', alpha=0.5, lw=2, label='Exposed')
-        ax.plot(self.t, I, 'r', alpha=0.5, lw=2, label='Infected')
-        ax.plot(self.t, D, 'black', alpha=0.5, lw=2, label='Fatalities')
-        ax.plot(self.t, R, 'g', alpha=0.5, lw=2, label='Recovered with immunity')
-        ax.set_xlabel('Time /days')
-        ax.set_ylabel('Population')
-        ax.yaxis.set_tick_params(length=0)
-        ax.xaxis.set_tick_params(length=0)
-        ax.grid(visible=True, which='major', c='w', lw=2, ls='-')
-        legend = ax.legend()
-        legend.get_frame().set_alpha(0.5)
-        for spine in ('top', 'right', 'bottom', 'left'):
-            ax.spines[spine].set_visible(False)
-        plt.savefig(f"{OUTPUT_DIRECTORY_PATH}/{self.name}.png")
-        plt.close()
+class TeamModel(Model):
+    def __init__(self, *models, name="team"):
+        super().__init__(name)
+        agg_results = []
+        for model in models:
+            if model.results is None:
+                raise ModelResultsNotCalculatedError()
+            else:
+                agg_results.append(model.results)
 
-    def save_results(self):
-        if self.results is None:
-            raise ModelResultsNotCalculatedError()
+        team_results = sum(agg_results)/len(agg_results)
+        
+        self.results = team_results
+        self.t = models[0].t
 
-        S, E, I, D, R = self.results.T
-        results = zip( S, E, I, D, R)
-        df = pd.DataFrame(results, columns=["Susceptible", "Exposed", "Infected", "Fatalities", "Recovered"])
-        df.to_csv(f"{OUTPUT_DIRECTORY_PATH}/{self.name}.csv")
 
-    def get_final_fatalities(self):
-        if self.results is None:
-            raise ModelResultsNotCalculatedError()
-
-        _, _, _, D, _ = self.results.T
-        return D[-1]
 
 
 def compare_models(baseline: SEIDR, model: SEIDR):
@@ -144,7 +169,6 @@ def compare_models(baseline: SEIDR, model: SEIDR):
             ax.spines[spine].set_visible(False)
         plt.savefig(f"{OUTPUT_DIRECTORY_PATH}/{model.name}_compare_{label}.png")
         plt.close()
-
 
 if __name__ == "__main__":
     # baseline
@@ -214,3 +238,12 @@ if __name__ == "__main__":
     model_delta.plot()
 
     compare_models(baseline, model_delta)
+
+    '''
+    TEAM MODEL
+    '''
+    team_model = TeamModel(model_gamma, model_alpha, model_delta, name="model_team")
+    team_model.save_results()
+    team_model.plot()
+
+    compare_models(baseline, team_model)
