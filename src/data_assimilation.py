@@ -6,13 +6,20 @@ import matplotlib.pyplot as plt
 
 LABELS = ["Susceptible","Exposed","Infected","Fatalities","Recovered"]
 
-def assimilate(baseline, deviation, surogate, baseline_var, surogate_var):
+def apply_noise(model, deviation):
+    noisy_model = {}
+    for label in LABELS:
+        serie = model[label].to_numpy()
+        noise = np.random.normal(0,deviation,serie.shape[0])
+        noisy_model[label] = serie + noise
+    return noisy_model
+
+
+def assimilate(noisy_baseline, surogate, baseline_var, surogate_var):
     results = {}
     for label in LABELS:
-        background = baseline[label].to_numpy()
-        # add noise
-        noise = np.random.normal(0,deviation,background.shape[0])
-        background = background + noise
+        background = noisy_baseline[label]
+        
         observation = surogate[label].to_numpy()
 
         operator = np.identity(observation.shape[0])
@@ -23,7 +30,7 @@ def assimilate(baseline, deviation, surogate, baseline_var, surogate_var):
         case.set( 'Background',          Vector = background )
         case.set( 'BackgroundError',     ScalarSparseMatrix = baseline_var)       
         case.set( 'Observation',         Vector = observation )
-        case.set( 'ObservationError',     ScalarSparseMatrix = baseline_var)       
+        case.set( 'ObservationError',     ScalarSparseMatrix = surogate_var)       
         case.set( 'ObservationOperator', Matrix = operator )
         case.execute()
 
@@ -39,24 +46,25 @@ OUTPUT_DIRECTORY_PATH = "../output"
 if __name__=="__main__":
 
     baseline = pd.read_csv(f'{OUTPUT_DIRECTORY_PATH}/baseline.csv')
-    model_alpha = pd.read_csv(f'{OUTPUT_DIRECTORY_PATH}/model_alpha.csv')
+    surogate = pd.read_csv(f'{OUTPUT_DIRECTORY_PATH}/surogate.csv')
 
+    noisy_baseline = apply_noise(baseline, deviation=100)
 
-    SEIDR = assimilate(baseline, deviation=10, surogate=model_alpha, baseline_var=1, surogate_var=1)
+    SEIDR = assimilate(noisy_baseline, surogate=surogate, baseline_var=1, surogate_var=10)
     # print(type(SEIDR[0]))
     
 
     for label, result in zip(LABELS, SEIDR):        
-        background = baseline[label].to_numpy()
+        background = noisy_baseline[label]
 
-        background = background
-        observation = model_alpha[label].to_numpy()
+        observation = surogate[label].to_numpy()
         t = np.arange(observation.shape[0])
 
         # plot
         fig = plt.figure(facecolor='w')
         ax = fig.add_subplot(111, facecolor='#dddddd', axisbelow=True)
-        ax.plot(t, background, 'green', alpha=0.5, lw=2, label=f'baseline')
+        ax.plot(t, baseline[label], 'black', alpha=0.5, lw=2, label=f'baseline')
+        ax.plot(t, background, 'green', alpha=0.5, lw=2, label=f'noisy baseline')
         ax.plot(t, observation, 'red', alpha=0.5, lw=2, label=f'model')
         ax.plot(t, result, 'blue', alpha=0.5, lw=2, label=f'assimilation')
         ax.set_xlabel('Time /days')
