@@ -20,8 +20,8 @@ def test_esn(data, test_size, name):
         for points_number in number_of_points:
             seidr = dl.loader_explicit(data, test_size=int(data.size * test_size))
             X, X_test, y, y_test = seidr()
-            step = int(data.size * (1 - test_size) / number_of_points)
-            indices  = torch.arange(0, int(data.size * (1 - test_size)), step)
+            step = int(data.size * (1 - test_size) / points_number)
+            indices  = torch.arange(0, int(data.size * (1 - test_size)) - 1, step)
             X = X[indices]
             y = y[indices]
             esn = DeepESN(num_layers=layers)
@@ -34,6 +34,7 @@ def test_esn(data, test_size, name):
             plt.savefig(f'../output/reservoir/{name}_layers_{layers}_train_{points_number}')
             current_mse = mean_squared_error(y_test, output)
             mse.append(current_mse)
+        plt.clf()
         plt.plot(number_of_points, mse,'b',label='mse')
         plt.xlabel("Train size")
         plt.ylabel("MSE")
@@ -54,8 +55,8 @@ def test_grouped_esn(data, test_size, name):
         for points_number in number_of_points:
             seidr = dl.loader_explicit(data, test_size=int(data.size * test_size))
             X, X_test, y, y_test = seidr()
-            step = int(data.size * (1 - test_size) / number_of_points)
-            indices  = torch.arange(0, int(data.size * (1 - test_size)), step)
+            step = int(data.size * (1 - test_size) / points_number)
+            indices  = torch.arange(0, int(data.size * (1 - test_size)) - 1, step)
             X = X[indices]
             y = y[indices]
             esn = GroupedDeepESN(num_layers=layers, groups=group)
@@ -68,6 +69,7 @@ def test_grouped_esn(data, test_size, name):
             plt.savefig(f'../output/reservoir/{name}_groups_{group}_train_{points_number}')
             current_mse = mean_squared_error(y_test, output)
             mse.append(current_mse)
+        plt.clf()
         plt.plot(number_of_points, mse,'b',label='mse')
         plt.xlabel("Train size")
         plt.ylabel("MSE")
