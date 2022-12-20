@@ -46,10 +46,16 @@ class Model(abc.ABC):
         if self.results is None:
             raise ModelResultsNotCalculatedError()
 
+        df = self.to_pandas()
+        df.to_csv(f"{OUTPUT_DIRECTORY_PATH}/{self.name}.csv")
+
+    def to_pandas(self):
+        if self.results is None:
+            raise ModelResultsNotCalculatedError()
         S, E, I, D, R = self.results.T
         results = zip( S, E, I, D, R)
         df = pd.DataFrame(results, columns=["Susceptible", "Exposed", "Infected", "Fatalities", "Recovered"])
-        df.to_csv(f"{OUTPUT_DIRECTORY_PATH}/{self.name}.csv")
+        return df
 
     def get_final_fatalities(self):
         if self.results is None:
@@ -75,7 +81,9 @@ class SEIDR(Model):
                 epsilon = 0.2, 
                 alpha = 0.01, 
                 delta = 0.01,
-                no_of_days = 400):
+                no_of_days = 400,
+                sampling_frequency = 1.0
+                ):
         super().__init__(name)
         # Susceptible
         self.S0 = S
@@ -105,7 +113,9 @@ class SEIDR(Model):
         self.delta = delta
 
         self.no_of_days = no_of_days
-        self.t = np.linspace(0, no_of_days, no_of_days+1)
+
+        sample_num = round(no_of_days/sampling_frequency)
+        self.t = np.linspace(0, no_of_days, sample_num+1)
     
 
     def _deriv(self, y, t):
