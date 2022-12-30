@@ -17,7 +17,7 @@ def apply_noise(model, deviation):
 
 def assimilate(noisy_baseline, surogate_params):
     case = adaoBuilder.New()
-    case.set( 'AlgorithmParameters', Algorithm = '3DVAR' )
+    case.set( 'AlgorithmParameters', Algorithm = '3DVAR', Parameters = {"Bounds": [[0,1] for _ in range(6)]} )
     case.set( 'Background',          Vector = surogate_params )
     case.set( 'Observation',         VectorSerie = noisy_baseline )
     case.set( 'ObservationOperator', OneFunction = True, Script = 'data_assimilation_funcs.py')
@@ -53,3 +53,6 @@ if __name__=="__main__":
     model = seidr_from_params(x, name=f'assimilation/after_assimilation', no_of_days=400) 
     model.plot()
     print(x)
+
+    baseline = pd.read_csv(f'{OUTPUT_DIRECTORY_PATH}/baseline.csv', usecols=[i for i in range(1,6)])
+    print(f'MSE: {((baseline.to_numpy()[80:] - model.results[80:])**2).mean()}')
