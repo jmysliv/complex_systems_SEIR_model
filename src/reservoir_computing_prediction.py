@@ -12,9 +12,11 @@ from auto_esn.esn.reservoir.activation import tanh
 
 def test_esn(data, test_size, name):
     mse = []
-    number_of_points = np.arange(40, 300, 20)
+    max_train_size = int(data.shape[0] * (1 - test_size))
+    number_of_points = np.arange(30, max_train_size, 10)
     number_of_layers = [1, 2, 4]
 
+    best_mse = []
     for layers in  number_of_layers:
         mse = []
         for points_number in number_of_points:
@@ -30,8 +32,8 @@ def test_esn(data, test_size, name):
             [X, X_test, y, y_test] = [torch.cat((set), dim=1) for set in sets ]
 
                
-            step = int(data.shape[0] * (1 - test_size) / points_number)
-            indices  = torch.arange(0, int(data.shape[0] * (1 - test_size)) - 1, step)
+            step = int(max_train_size / points_number)
+            indices  = torch.arange(0, max_train_size - 1, step)
             X = X[indices]
             y = y[indices]
             esn = DeepESN(num_layers=layers, input_size=5)
@@ -59,15 +61,24 @@ def test_esn(data, test_size, name):
         plt.ylabel("MSE")
         plt.legend()
         plt.savefig(f'../output/reservoir/{name}_layers_{layers}_chart')
-        
+        best_mse.append(min(mse))
+    plt.clf()
+    plt.plot(number_of_layers, best_mse,'b',label='mse')
+    plt.xlabel("Number of layers")
+    plt.ylabel("Best MSE")
+    plt.legend()
+    plt.savefig(f'../output/reservoir/{name}_layers_chart')
+    
 
 
 
 def test_grouped_esn(data, test_size, name):
     mse = []
-    number_of_points = np.arange(40, 300, 20)
+    max_train_size = int(data.shape[0] * (1 - test_size))
+    number_of_points = np.arange(30, max_train_size, 10)
     number_of_groups = [2, 3, 4]
 
+    best_mse = []
     for group in  number_of_groups:
         mse = []
         layers = ((2,)*group)
@@ -83,8 +94,8 @@ def test_grouped_esn(data, test_size, name):
             
             [X, X_test, y, y_test] = [torch.cat((set), dim=1) for set in sets ]
 
-            step = int(data.shape[0] * (1 - test_size) / points_number)
-            indices  = torch.arange(0, int(data.shape[0] * (1 - test_size)) - 1, step)
+            step = int(max_train_size / points_number)
+            indices  = torch.arange(0, max_train_size - 1, step)
             X = X[indices]
             y = y[indices]
             esn = GroupedDeepESN(num_layers=layers, groups=group, input_size=5)
@@ -112,8 +123,15 @@ def test_grouped_esn(data, test_size, name):
         plt.ylabel("MSE")
         plt.legend()
         plt.savefig(f'../output/reservoir/{name}_groups_{group}_chart')
+        best_mse.append(min(mse))
+    plt.clf()
+    plt.plot(number_of_groups, best_mse,'b',label='mse')
+    plt.xlabel("Number of groups")
+    plt.ylabel("Best MSE")
+    plt.legend()
+    plt.savefig(f'../output/reservoir/{name}_groups_chart')
 
 if __name__ == "__main__":
     baseline = pd.read_csv('../output/baseline.csv', usecols=[1, 2, 3, 4, 5])
-    test_esn(baseline, 0.2, "esn")
-    test_grouped_esn(baseline, 0.2, "grouped_esn")
+    test_esn(baseline, 0.8, "esn")
+    test_grouped_esn(baseline, 0.8, "grouped_esn")
