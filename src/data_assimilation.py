@@ -50,9 +50,15 @@ if __name__=="__main__":
 
     x = assimilate(noisy_baseline, surogate_params=surogate)
     
+    # model = seidr_from_params(x, name=f'assimilation/after_assimilation', no_of_days=400, sampling_frequency=0.01) 
+    # model.save_results()
+
+    
     model = seidr_from_params(x, name=f'assimilation/after_assimilation', no_of_days=400) 
     model.plot()
+    model.save_results()
     print(x)
+
 
     baseline = pd.read_csv(f'{OUTPUT_DIRECTORY_PATH}/baseline.csv', usecols=[i for i in range(1,6)])
     print(f'MSE: {((baseline.to_numpy()[80:] - model.results[80:])**2).mean()}')
