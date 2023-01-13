@@ -34,8 +34,10 @@ def test_esn(data, test_size, name, pretraining_data=None):
     number_of_layers = [1, 2, 4]
 
     best_mse = []
+    best_mse_pretraining_only = []
     for layers in  number_of_layers:
         mse = []
+        mse_pretraining_only = []
         for points_number in number_of_points:
             sets = tuple([] for _ in range(4))
             for column in data:
@@ -71,6 +73,8 @@ def test_esn(data, test_size, name, pretraining_data=None):
                 for _ in range(5):
                     esn.fit(X_p, y_p)
                 output = test_and_plot(esn, X_test, y_test, f'../output/reservoir/{name}_pretraining_only_layers_{layers}_train_{points_number}',int(data.shape[0] * test_size))
+                current_mse = mean_squared_error(y_test, output)
+                mse_pretraining_only.append(current_mse)
 
 
             esn.fit(X, y)
@@ -85,13 +89,30 @@ def test_esn(data, test_size, name, pretraining_data=None):
         plt.legend()
         plt.savefig(f'../output/reservoir/{name}_layers_{layers}_chart')
         best_mse.append(min(mse))
+        if pretraining_data is not None:
+            x_labels = [num/data.shape[0] for num in number_of_points]
+            plt.clf()
+            plt.plot(x_labels, mse_pretraining_only,'b',label='mse')
+            plt.xlabel("Relative size of train data")
+            plt.ylabel("MSE")
+            plt.legend()
+            plt.savefig(f'../output/reservoir/{name}_pretraining_only_layers_{layers}_chart')
+            best_mse_pretraining_only.append(min(mse))
+        
     plt.clf()
     plt.plot(number_of_layers, best_mse,'b',label='mse')
     plt.xlabel("Number of layers")
     plt.ylabel("Best MSE")
     plt.legend()
     plt.savefig(f'../output/reservoir/{name}_layers_chart')
-    
+
+    if pretraining_data is not None:
+        plt.clf()
+        plt.plot(number_of_layers, best_mse_pretraining_only,'b',label='mse')
+        plt.xlabel("Number of groups")
+        plt.ylabel("Best MSE")
+        plt.legend()
+        plt.savefig(f'../output/reservoir/{name}_pretraining_only_layers_chart')
 
 
 
@@ -102,9 +123,12 @@ def test_grouped_esn(data, test_size, name, pretraining_data=None):
     number_of_groups = [2, 3, 4]
 
     best_mse = []
+    best_mse_pretraining_only = []
     for group in  number_of_groups:
         mse = []
         layers = ((2,)*group)
+        mse_pretraining_only = []
+
         for points_number in number_of_points:
             sets = tuple([] for _ in range(4))
             for column in data:
@@ -135,7 +159,8 @@ def test_grouped_esn(data, test_size, name, pretraining_data=None):
                 [X_p, y_p] = [torch.cat((set), dim=1) for set in pretraining_sets ]
                 esn.fit(X_p, y_p)
                 output = test_and_plot(esn, X_test, y_test, f'../output/reservoir/{name}_pretraining_only_groups_{group}_train_{points_number}',int(data.shape[0] * test_size))
-
+                current_mse = mean_squared_error(y_test, output)
+                mse_pretraining_only.append(current_mse)
 
             esn.fit(X, y)
             output = output = test_and_plot(esn, X_test, y_test, f'../output/reservoir/{name}_groups_{group}_train_{points_number}' ,int(data.shape[0] * test_size))
@@ -150,12 +175,32 @@ def test_grouped_esn(data, test_size, name, pretraining_data=None):
         plt.legend()
         plt.savefig(f'../output/reservoir/{name}_groups_{group}_chart')
         best_mse.append(min(mse))
+
+        if pretraining_data is not None:
+            x_labels = [num/data.shape[0] for num in number_of_points]
+            plt.clf()
+            plt.plot(x_labels, mse_pretraining_only,'b',label='mse')
+            plt.xlabel("Relative size of train data")
+            plt.ylabel("MSE")
+            plt.legend()
+            plt.savefig(f'../output/reservoir/{name}_pretraining_only_groups_{group}_chart')
+            best_mse_pretraining_only.append(min(mse))
+
     plt.clf()
     plt.plot(number_of_groups, best_mse,'b',label='mse')
     plt.xlabel("Number of groups")
     plt.ylabel("Best MSE")
     plt.legend()
     plt.savefig(f'../output/reservoir/{name}_groups_chart')
+
+    if pretraining_data is not None:
+        plt.clf()
+        plt.plot(number_of_groups, best_mse_pretraining_only,'b',label='mse')
+        plt.xlabel("Number of groups")
+        plt.ylabel("Best MSE")
+        plt.legend()
+        plt.savefig(f'../output/reservoir/{name}_pretraining_only_groups_chart')
+
 
 if __name__ == "__main__":
     baseline = pd.read_csv('../output/baseline.csv', usecols=[1, 2, 3, 4, 5])
